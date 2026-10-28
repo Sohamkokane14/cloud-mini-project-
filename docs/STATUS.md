@@ -9,8 +9,9 @@
 
 ## Shared/data lane — `feat/shared`
 
-- Status: Not started
+- Status: Ready for review
 - Scope: shared package, database schema, matching tests
+- Validation: `python -m pytest -q` — 3 passed; `python -m compileall -q shared tests` passed
 
 ## Student portal lane — `feat/student`
 
