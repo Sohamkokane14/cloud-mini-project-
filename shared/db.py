@@ -78,12 +78,13 @@ def _serialise_tags(value: Any) -> str:
     return json.dumps(list(value))
 
 
-def _decode_row(row: Any) -> dict[str, Any]:
+def _decode_row(row: Any, columns: tuple[str, ...] | None = None) -> dict[str, Any]:
     """Convert a SQLite row or pyodbc row into a plain template-friendly dict."""
     if isinstance(row, sqlite3.Row):
         result = dict(row)
     else:
-        result = {column[0]: value for column, value in zip(row.cursor_description, row)}
+        column_names = columns or tuple(column[0] for column in row.cursor_description)
+        result = dict(zip(column_names, row))
     tags = result.get("Tags")
     if isinstance(tags, str):
         try:
@@ -91,6 +92,14 @@ def _decode_row(row: Any) -> dict[str, Any]:
         except json.JSONDecodeError:
             result["Tags"] = [tag.strip() for tag in tags.split(",") if tag.strip()]
     return result
+
+
+def _execute(cursor: Any, query: str, parameters: tuple[Any, ...] | list[Any] = ()) -> Any:
+    """Execute parameterized SQL with the calling convention of the active driver."""
+    values = tuple(parameters)
+    if APP_MODE == "mock":
+        return cursor.execute(query, values)
+    return cursor.execute(query, *values)
 
 
 @contextmanager
@@ -160,10 +169,10 @@ def create_item(data: dict) -> int:
     with _connection() as connection:
         cursor = connection.cursor()
         if APP_MODE == "mock":
-            cursor.execute(f"INSERT INTO Items ({columns}) VALUES ({placeholders})", values)
+            _execute(cursor, f"INSERT INTO Items ({columns}) VALUES ({placeholders})", values)
             return int(cursor.lastrowid)
-        cursor.execute(
-            f"INSERT INTO Items ({columns}) OUTPUT INSERTED.ItemId VALUES ({placeholders})", values
+        _execute(
+            cursor, f"INSERT INTO Items ({columns}) OUTPUT INSERTED.ItemId VALUES ({placeholders})", values
         )
         return int(cursor.fetchone()[0])
 
@@ -171,8 +180,10 @@ def create_item(data: dict) -> int:
 def get_item(item_id: int) -> dict | None:
     """Return one item by ID, or None when it does not exist."""
     with _connection() as connection:
-        row = connection.cursor().execute("SELECT * FROM Items WHERE ItemId = ?", (item_id,)).fetchone()
-    return _decode_row(row) if row else None
+        cursor = _execute(connection.cursor(), "SELECT * FROM Items WHERE ItemId = ?", (item_id,))
+        row = cursor.fetchone()
+        columns = tuple(column[0] for column in cursor.description)
+    return _decode_row(row, columns) if row else None
 
 
 def list_items(
@@ -193,10 +204,12 @@ def list_items(
     where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
     limit_clause = " LIMIT ?" if APP_MODE == "mock" else " OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY"
     with _connection() as connection:
-        rows = connection.cursor().execute(
-            f"SELECT * FROM Items{where} ORDER BY CreatedAt DESC{limit_clause}", values + [limit]
-        ).fetchall()
-    return [_decode_row(row) for row in rows]
+        cursor = _execute(
+            connection.cursor(), f"SELECT * FROM Items{where} ORDER BY CreatedAt DESC{limit_clause}", values + [limit]
+        )
+        rows = cursor.fetchall()
+        columns = tuple(column[0] for column in cursor.description)
+    return [_decode_row(row, columns) for row in rows]
 
 
 def update_item_status(item_id: int, status: str) -> None:
@@ -204,19 +217,19 @@ def update_item_status(item_id: int, status: str) -> None:
     if status not in ITEM_STATUSES:
         raise ValueError("Invalid item status")
     with _connection() as connection:
-        connection.cursor().execute("UPDATE Items SET Status = ? WHERE ItemId = ?", (status, item_id))
+        _execute(connection.cursor(), "UPDATE Items SET Status = ? WHERE ItemId = ?", (status, item_id))
 
 
 def delete_item(item_id: int) -> str | None:
     """Delete one item and related matches, returning its image URL if present."""
     with _connection() as connection:
         cursor = connection.cursor()
-        row = cursor.execute("SELECT ImageUrl FROM Items WHERE ItemId = ?", (item_id,)).fetchone()
+        row = _execute(cursor, "SELECT ImageUrl FROM Items WHERE ItemId = ?", (item_id,)).fetchone()
         if not row:
             return None
         image_url = row[0]
-        cursor.execute("DELETE FROM Matches WHERE LostItemId = ? OR FoundItemId = ?", (item_id, item_id))
-        cursor.execute("DELETE FROM Items WHERE ItemId = ?", (item_id,))
+        _execute(cursor, "DELETE FROM Matches WHERE LostItemId = ? OR FoundItemId = ?", (item_id, item_id))
+        _execute(cursor, "DELETE FROM Items WHERE ItemId = ?", (item_id,))
         return image_url
 
 
@@ -227,12 +240,14 @@ def create_match(lost_id: int, found_id: int, score: float) -> int:
     with _connection() as connection:
         cursor = connection.cursor()
         if APP_MODE == "mock":
-            cursor.execute(
+            _execute(
+                cursor,
                 "INSERT INTO Matches (LostItemId, FoundItemId, Score) VALUES (?, ?, ?)",
                 (lost_id, found_id, score),
             )
             return int(cursor.lastrowid)
-        cursor.execute(
+        _execute(
+            cursor,
             "INSERT INTO Matches (LostItemId, FoundItemId, Score) OUTPUT INSERTED.MatchId VALUES (?, ?, ?)",
             (lost_id, found_id, score),
         )
@@ -257,8 +272,10 @@ def list_matches(item_id: int | None = None, status: str | None = None) -> list[
         f"{where} ORDER BY m.Score DESC, m.CreatedAt DESC"
     )
     with _connection() as connection:
-        rows = connection.cursor().execute(query, values).fetchall()
-    return [_decode_row(row) for row in rows]
+        cursor = _execute(connection.cursor(), query, values)
+        rows = cursor.fetchall()
+        columns = tuple(column[0] for column in cursor.description)
+    return [_decode_row(row, columns) for row in rows]
 
 
 def update_match_status(match_id: int, status: str) -> None:
@@ -266,25 +283,34 @@ def update_match_status(match_id: int, status: str) -> None:
     if status not in MATCH_STATUSES:
         raise ValueError("Invalid match status")
     with _connection() as connection:
-        connection.cursor().execute("UPDATE Matches SET Status = ? WHERE MatchId = ?", (status, match_id))
+        _execute(connection.cursor(), "UPDATE Matches SET Status = ? WHERE MatchId = ?", (status, match_id))
 
 
 def get_stats() -> dict:
     """Return dashboard totals and a category breakdown."""
     with _connection() as connection:
         cursor = connection.cursor()
-        totals = cursor.execute(
+        cursor = _execute(
+            cursor,
             "SELECT Type, Status, COUNT(*) AS Count FROM Items GROUP BY Type, Status"
-        ).fetchall()
-        categories = cursor.execute(
+        )
+        totals = cursor.fetchall()
+        total_columns = tuple(column[0] for column in cursor.description)
+        cursor = _execute(
+            cursor,
             "SELECT Category, COUNT(*) AS Count FROM Items GROUP BY Category ORDER BY Category"
-        ).fetchall()
+        )
+        categories = cursor.fetchall()
+        category_columns = tuple(column[0] for column in cursor.description)
     result = {"lost": 0, "found": 0, "returned": 0, "by_category": {}}
     for row in totals:
-        decoded = _decode_row(row)
+        decoded = _decode_row(row, total_columns)
         if decoded["Status"] == "returned":
             result["returned"] += decoded["Count"]
         elif decoded["Type"] in {"lost", "found"}:
             result[decoded["Type"]] += decoded["Count"]
-    result["by_category"] = {_decode_row(row)["Category"]: _decode_row(row)["Count"] for row in categories}
+    result["by_category"] = {
+        _decode_row(row, category_columns)["Category"]: _decode_row(row, category_columns)["Count"]
+        for row in categories
+    }
     return result
