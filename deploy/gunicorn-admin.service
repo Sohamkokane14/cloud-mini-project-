@@ -1,0 +1,16 @@
+[Unit]
+Description=Lost & Found Admin Panel
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/lostfound
+EnvironmentFile=/etc/lostfound.env
+ExecStart=/opt/lostfound/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 --timeout 600 wsgi_admin:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
