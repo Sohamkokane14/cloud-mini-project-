@@ -33,5 +33,6 @@
 
 ## Documentation lane — `feat/docs`
 
-- Status: Not started
+- Status: Ready for review
 - Scope: report/PPT draft and screenshot checklist
+- Deliverables: report content, 13-slide presentation outline, and 19-item screenshot checklist
