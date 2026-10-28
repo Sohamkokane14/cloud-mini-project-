@@ -19,7 +19,7 @@ if [[ -z "$KEY_VAULT_URL" ]]; then
 fi
 
 apt-get update
-apt-get install -y ca-certificates curl gnupg git nginx openssl python3-venv python3-pip g++
+apt-get install -y ca-certificates curl gnupg git nginx openssl python3-venv python3-pip python3-dev g++
 
 # Install Microsoft ODBC Driver 18 only when it is not already available.
 if ! odbcinst -q -d -n "ODBC Driver 18 for SQL Server" >/dev/null 2>&1; then
