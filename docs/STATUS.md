@@ -27,8 +27,9 @@
 
 ## Deployment lane — `feat/deploy`
 
-- Status: Not started
+- Status: Ready for review
 - Scope: deployment configuration, dependencies, and deployment guide
+- Validation: `bash -n deploy/vm-setup.sh` and `pip install --dry-run -r requirements.txt` passed
 
 ## Documentation lane — `feat/docs`
 
