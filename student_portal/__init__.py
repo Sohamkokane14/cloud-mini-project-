@@ -1,0 +1,1 @@
+"""Student Portal Flask package."""
