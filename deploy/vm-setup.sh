@@ -26,7 +26,7 @@ if ! odbcinst -q -d -n "ODBC Driver 18 for SQL Server" >/dev/null 2>&1; then
   install -d -m 0755 /etc/apt/keyrings
   curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft-prod.gpg
   curl -fsSL https://packages.microsoft.com/config/ubuntu/24.04/prod.list -o /etc/apt/sources.list.d/microsoft-prod.list
-  sed -i 's#^deb #deb [signed-by=/etc/apt/keyrings/microsoft-prod.gpg] #' /etc/apt/sources.list.d/microsoft-prod.list
+  sed -i 's#/usr/share/keyrings/microsoft-prod.gpg#/etc/apt/keyrings/microsoft-prod.gpg#' /etc/apt/sources.list.d/microsoft-prod.list
   apt-get update
   ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
 fi
