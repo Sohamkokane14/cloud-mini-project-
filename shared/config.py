@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
+from dotenv import load_dotenv
+
+
+# Local development values stay in the ignored project-root .env file. Existing
+# process/app-service environment variables take precedence over that file.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 APP_MODE = os.getenv("APP_MODE", "mock").strip().lower()
 if APP_MODE not in {"mock", "local", "cloud"}:
