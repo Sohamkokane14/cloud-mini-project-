@@ -1,0 +1,9 @@
+body { color: #1c2733; }
+.hero { background: linear-gradient(120deg, #0d6efd, #084298); color: #fff; }
+.hero h1 { font-weight: 700; }
+.stat-card { border: 0; box-shadow: 0 .125rem .5rem rgba(0,0,0,.08); }
+.stat-card small { color: #6c757d; display: block; }
+.stat-card strong { font-size: 2rem; }
+.item-card { border: 0; box-shadow: 0 .125rem .5rem rgba(0,0,0,.08); transition: transform .15s ease; }
+.item-card:hover { transform: translateY(-2px); }
+.item-image { max-height: 380px; object-fit: cover; }
