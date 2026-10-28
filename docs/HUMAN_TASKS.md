@@ -4,7 +4,7 @@ Do not record credentials, keys, passwords, connection strings, or private IP in
 
 | ID | Checkpoint | Status | Non-secret evidence to record |
 | --- | --- | --- |
-| HUMAN-01 | Required local tools, including ODBC Driver 18 | Pending verification | Python/Git/GitHub CLI versions; ODBC installed confirmation |
+| HUMAN-01 | Required local tools, including ODBC Driver 18 | Partially verified | Python 3.12.10, Git 2.55.0, and GitHub CLI 2.102.0 found; ODBC Driver 18 still needs confirmation |
 | HUMAN-02 | GitHub login and Git identity | Verified during audit | GitHub account name only |
 | HUMAN-03 | Azure for Students subscription | Pending | subscription activated |
 | HUMAN-04 | Resource group and chosen region | Pending | region only |

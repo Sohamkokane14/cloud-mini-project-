@@ -6,7 +6,7 @@ The planned architecture demonstrates Azure App Service (PaaS), a Linux VM (IaaS
 
 ## Project status
 
-Foundation setup is in progress. Application code has not yet been added.
+Foundation setup is complete. Application code has not yet been added.
 
 ## Planning and safety
 

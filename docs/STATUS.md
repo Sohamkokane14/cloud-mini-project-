@@ -2,8 +2,8 @@
 
 ## Foundation
 
-- Status: In progress
-- Git baseline: awaiting initial commit and remote synchronization
+- Status: Completed
+- Git baseline: committed as `b3bda40` and synchronized to `origin/main` and `origin/dev`
 - Canonical plan: present at repository root
 - Contracts: defined
 
