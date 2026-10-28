@@ -21,8 +21,9 @@
 
 ## Admin panel lane — `feat/admin`
 
-- Status: Not started
+- Status: Ready for review
 - Scope: Flask admin panel and `wsgi_admin.py`
+- Validation: Flask mock-mode login, dashboard, and return-item smoke test passed; compilation passed
 
 ## Deployment lane — `feat/deploy`
 
