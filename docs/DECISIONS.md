@@ -9,3 +9,4 @@
 | 2026-10-28 | Integrate `feat/student` into `dev`. | Student Portal smoke tests passed against the integrated mock data layer. | Approved |
 | 2026-10-28 | Integrate `feat/admin` into `dev`. | Admin login, dashboard, and item-status smoke tests passed in mock mode. | Approved |
 | 2026-10-28 | Integrate `feat/deploy` into `dev`. | Dependency resolution and Linux-shell validation completed; LF is enforced for VM artifacts. | Approved |
+| 2026-10-28 | Integrate `feat/docs` into `dev`. | Report content, presentation outline, and a secret-safe screenshot checklist are ready. | Approved |
