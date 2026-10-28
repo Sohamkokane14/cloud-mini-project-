@@ -15,8 +15,9 @@
 
 ## Student portal lane — `feat/student`
 
-- Status: Not started
+- Status: Ready for review
 - Scope: Flask student portal and `wsgi_student.py`
+- Validation: Flask mock-mode smoke test passed for health, report, browse, and My Items; compilation passed
 
 ## Admin panel lane — `feat/admin`
 
