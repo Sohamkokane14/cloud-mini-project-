@@ -16,6 +16,12 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('report', item_type='lost') }}">Report Lost</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('report', item_type='found') }}">Report Found</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('my_items') }}">My Items</a></li>
+        {% if is_authenticated %}
+          <li class="nav-item"><span class="navbar-text text-white-50 ms-lg-2">{{ current_user }}</span></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('sign_out') }}">Sign out</a></li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link fw-semibold" href="{{ url_for('sign_in') }}">Student sign in</a></li>
+        {% endif %}
       </ul></div>
     </div>
   </nav>

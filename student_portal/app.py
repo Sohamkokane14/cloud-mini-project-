@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 from datetime import date
+from functools import wraps
 from pathlib import Path
+from urllib.parse import quote
 
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_from_directory, url_for
 
@@ -15,9 +17,33 @@ CATEGORIES = ("Electronics", "ID Card", "Books", "Bottle", "Bag", "Keys", "Cloth
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
 
-def _current_user() -> str:
-    """Read App Service authentication identity, with a safe mock-mode fallback."""
-    return request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME", "demo@student.local")
+def _current_user() -> str | None:
+    """Read the student identity supplied by App Service Easy Auth."""
+    identity = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME", "").strip()
+    if identity:
+        return identity
+    if os.getenv("APP_MODE", "mock").strip().lower() == "mock":
+        return "demo@student.local"
+    return None
+
+
+def _safe_redirect_path(candidate: str | None) -> str:
+    """Keep Easy Auth return paths inside this portal."""
+    if candidate and candidate.startswith("/") and not candidate.startswith("//"):
+        return candidate
+    return "/"
+
+
+def require_student(view):
+    """Require a Microsoft Entra identity for student-owned actions."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not _current_user():
+            flash("Sign in with your campus Microsoft account to continue.", "info")
+            return redirect(url_for("sign_in", next=request.full_path))
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 def _valid_upload(filename: str) -> bool:
@@ -34,12 +60,30 @@ def create_app() -> Flask:
 
     @app.context_processor
     def template_context() -> dict:
-        return {"categories": CATEGORIES, "today": date.today().isoformat()}
+        current_user = _current_user()
+        return {
+            "categories": CATEGORIES,
+            "today": date.today().isoformat(),
+            "current_user": current_user,
+            "is_authenticated": bool(current_user),
+        }
 
     @app.get("/health")
     def health():
         """Provide a small health probe for App Service."""
         return jsonify({"status": "ok"})
+
+    @app.get("/sign-in")
+    def sign_in():
+        """Start the Microsoft Entra sign-in flow managed by App Service."""
+        destination = _safe_redirect_path(request.args.get("next"))
+        encoded_destination = quote(destination, safe="/%?=&")
+        return redirect(f"/.auth/login/aad?post_login_redirect_uri={encoded_destination}")
+
+    @app.get("/sign-out")
+    def sign_out():
+        """End the App Service authentication session and return home."""
+        return redirect("/.auth/logout?post_logout_redirect_uri=/")
 
     @app.get("/")
     def home():
@@ -47,6 +91,7 @@ def create_app() -> Flask:
         return render_template("home.html", stats=db.get_stats(), items=db.list_items(limit=6))
 
     @app.route("/report/<item_type>", methods=["GET", "POST"])
+    @require_student
     def report(item_type: str):
         """Create a lost or found report and display any suggested matches."""
         if item_type not in {"lost", "found"}:
@@ -104,6 +149,7 @@ def create_app() -> Flask:
         )
 
     @app.get("/my-items")
+    @require_student
     def my_items():
         """Show the current student's own reports and their suggestions."""
         items = db.list_items(reporter_email=_current_user(), limit=100)
